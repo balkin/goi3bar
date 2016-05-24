@@ -7,27 +7,26 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"io/ioutil"
 )
 
-type CommandItem struct {
-}
-
-type CommandGenerator struct {
-	Label    string `json:"label"`
-	Instance string `json:"instance"`
-	Command  string `json:"command"`
-	Color    string `json:"color"`
+type Command struct {
+	Label        string `json:"label"`
+	Instance     string `json:"instance"`
+	Command      string `json:"command"`
+	Color        string `json:"color"`
+	ClickCommand string `json:"onclick"`
 
 	// Identifier for receiving click events
-	Name     string
+	Name         string
 }
 
-func (g CommandGenerator) Generate() ([]i3.Output, error) {
+func (g Command) Generate() ([]i3.Output, error) {
 	items := make([]i3.Output, 1)
 
 	items[0].Name = g.Name
 	cmd := exec.Command(g.Command)
-	if (len(g.Instance) > 0) {
+	if g.Instance != "" {
 		cmd.Env = []string{fmt.Sprintf("BLOCK_INSTANCE=%s", g.Instance)}
 	}
 	var out bytes.Buffer
@@ -38,13 +37,13 @@ func (g CommandGenerator) Generate() ([]i3.Output, error) {
 		items[0].FullText = "ERROR"
 		items[0].Color = i3.DefaultColors.Crit
 	} else {
-		if (g.Color == "") {
+		if g.Color == "" {
 			items[0].Color = i3.DefaultColors.General
 		} else {
 			items[0].Color = g.Color
 		}
 		text := strings.TrimRight(out.String(), "\n\r")
-		if (g.Label == "") {
+		if g.Label == "" {
 			items[0].FullText = fmt.Sprintf("%s %s", g.Label, text)
 		} else {
 			items[0].FullText = text
@@ -53,4 +52,16 @@ func (g CommandGenerator) Generate() ([]i3.Output, error) {
 	items[0].Instance = g.Command
 	items[0].Separator = true
 	return items, nil
+}
+
+func (c *Command) Click(e i3.ClickEvent) error {
+	if c.ClickCommand == "" {
+		return nil
+	}
+	splitArgs := strings.Split(c.ClickCommand, " ")
+	cmd := exec.Command(splitArgs[0], splitArgs[1:]...)
+	cmd.Stdout = ioutil.Discard
+	log.Println()
+	err := cmd.Run()
+	return err
 }

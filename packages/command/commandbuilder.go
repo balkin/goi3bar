@@ -9,8 +9,8 @@ import (
 const Identifier = "command"
 
 type CommandConfig struct {
-	Interval string             `json:"interval"`
-	Options  CommandGenerator   `json:"options"`
+	Interval string `json:"interval"`
+	Options  Command `json:"options"`
 }
 
 type CommandBuilder struct {
@@ -28,12 +28,14 @@ func (b CommandBuilder) Build(c config.Config) (p i3.Producer, err error) {
 		return
 	}
 
-	conf.Options.Name = Identifier
+	if (c.Name == "") {
+		c.Name = Identifier
+	}
 
-	return &i3.BaseProducer{
-		Generator: conf.Options,
+	return &i3.BaseProducerClicker{
+		GeneratorClicker: &conf.Options,
 		Interval:  interval,
-		Name:      "cmd",
+		Name:      c.Name,
 	}, nil
 }
 
